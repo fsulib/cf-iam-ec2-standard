@@ -1,0 +1,244 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: >
+  This template creates
+  an IAM Role that forms the basis of an Instance Profile. The role includes
+  inline policies that allow ListObjects, Get, Put, and DeleteObject
+  permissions on the ec2 and va-backups.lib.fsu.edu buckets. Get, Put, and
+  Delete work for all objects falling under a key designated by the parameter
+  'ObjectAccessKey.' We also allow ec2:DescribeInstances, ec2:CreateTags, and
+  cloudformation:DescribeAppResources to aid in UserData and cfn-init
+  scripting. Naturally, we include the AWS managed policies
+  AmazonSSMManagedInstanceCore and CloudWatchAgentServerPolicy. Finally, the
+  boolean parameter 'EnableLogging' controls logs:CreateLogStream and
+  logs:PutLogEvents.  The default value is 'false.' If selecting 'true,' be
+  sure to indicate a descriptive name for the associated log group by supplying
+  a string to the 'LogGroupName' parameter. This exports the name
+  'IamResources-InstanceProfileArn' for use in nested templates.
+
+Parameters:
+
+  ObjectAccessKey:
+    Description: >
+      The key under which the instance may exercise CRUD permissions.
+    Type: String
+
+  EnableLogging:
+    Description: >
+      A boolean that determines whether the instance may write its logs
+      to CloudWatch.
+    Type: String
+    AllowedValues:
+      - false
+      - true
+    Default: false
+
+  LogGroupName:
+    Description: >
+      A name for the log group if logging is enabled.
+    Type: String
+    Default: "logging_disabled"
+
+Conditions:
+  LoggingEnabled:
+    Fn::Equals:
+      - !Ref EnableLogging
+      - true
+  LoggingDisabled:
+    Fn::Not:
+      - Fn::Equals:
+          - !Ref EnableLogging
+          - true
+
+Resources:
+
+  InstanceRoleNoLogging:
+    Type: AWS::IAM::Role
+    Condition: LoggingDisabled
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: '/instance_roles/'
+      Policies:
+        - PolicyName: BucketPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Resource: 'arn:aws:s3:::ec2.lib.fsu.edu'
+                Action:
+                  - 's3:ListBucket'
+              - Effect: Allow
+                Resource: !Sub 'arn:aws:s3:::ec2.lib.fsu.edu/${ObjectAccessKey}/*'
+                Action:
+                  - 's3:PutObject'
+                  - 's3:GetObject'
+                  - 's3:DeleteObject'
+                  - 's3:CreateMultipartUpload'
+                  - 's3:CompleteMultipartUpload'
+                  - 's3:AbortMultipartUpload'
+                  - 's3:ListMultipartUploads'
+              - Effect: Allow
+                Resource: 'arn:aws:s3:::va-backups.lib.fsu.edu'
+                Action:
+                  - 's3:ListBucket'
+              - Effect: Allow
+                Resource: !Sub 'arn:aws:s3:::va-backups.lib.fsu.edu/${ObjectAccessKey}/*'
+                Action:
+                  - 's3:PutObject'
+                  - 's3:GetObject'
+                  - 's3:DeleteObject'
+        - PolicyName: Ec2ApiPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Resource: '*'
+                Action:
+                  - 'ec2:DescribeInstances'
+                  - 'ec2:CreateTags'
+        - PolicyName: StackResourcePolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Resource: '*'
+                Action:
+                  - 'cloudformation:DescribeStackResource'
+        - PolicyName: AcmAccessPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Resource: '*'
+                Action:
+                  - 'acm:GetCertificate'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore'
+        - 'arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy'
+
+  InstanceRoleWithLogging:
+    Type: AWS::IAM::Role
+    Condition: LoggingEnabled
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: '/instance_roles/'
+      Policies:
+        - PolicyName: BucketPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Resource: 'arn:aws:s3:::ec2.lib.fsu.edu'
+                Action:
+                  - 's3:ListBucket'
+              - Effect: Allow
+                Resource: !Sub 'arn:aws:s3:::ec2.lib.fsu.edu/${ObjectAccessKey}/*'
+                Action:
+                  - 's3:PutObject'
+                  - 's3:GetObject'
+                  - 's3:DeleteObject'
+                  - 's3:CreateMultipartUpload'
+                  - 's3:CompleteMultipartUpload'
+                  - 's3:AbortMultipartUpload'
+                  - 's3:ListMultipartUploads'
+              - Effect: Allow
+                Resource: 'arn:aws:s3:::va-backups.lib.fsu.edu'
+                Action:
+                  - 's3:ListBucket'
+              - Effect: Allow
+                Resource: !Sub 'arn:aws:s3:::va-backups.lib.fsu.edu/${ObjectAccessKey}/*'
+                Action:
+                  - 's3:PutObject'
+                  - 's3:GetObject'
+                  - 's3:DeleteObject'
+        - PolicyName: Ec2ApiPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Resource: '*'
+                Action:
+                  - 'ec2:DescribeInstances'
+                  - 'ec2:CreateTags'
+        - PolicyName: StackResourcePolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Resource: '*'
+                Action:
+                  - 'cloudformation:DescribeStackResource'
+        - PolicyName: AcmAccessPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Resource: '*'
+                Action:
+                  - 'acm:GetCertificate'
+        - PolicyName: LoggingPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Resource: !GetAtt InstanceLogGroup.Arn
+                Action:
+                  - 'logs:CreateLogStream'
+                  - 'logs:CreateLogGroups'
+                  - 'logs:PutLogEvents'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore'
+        - 'arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy'
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - Fn::If:
+            - LoggingEnabled
+            - !Ref InstanceRoleWithLogging
+            - !Ref InstanceRoleNoLogging
+
+
+  InstanceLogGroup:
+    Type: AWS::Logs::LogGroup
+    Condition: LoggingEnabled
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      RetentionInDays: 14
+
+Outputs:
+
+  InstanceProfileArn:
+    Description: The Arn of the instance profile.
+    Value: !GetAtt InstanceProfile.Arn
+
+  InstanceProfileName:
+    Description: The name of the instance profile.
+    Value: !Ref InstanceProfile
+
+  InstanceRoleName:
+    Description: The name of the role.
+    Value:
+      Fn::If:
+        - LoggingEnabled
+        - !Ref InstanceRoleWithLogging
+        - !Ref InstanceRoleNoLogging
+
+# vim: set fdm=indent: 
