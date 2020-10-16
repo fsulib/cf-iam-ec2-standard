@@ -120,6 +120,22 @@ Resources:
                 Resource: '*'
                 Action:
                   - 'acm:GetCertificate'
+        - PolicyName: ParametersPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'ssm:DescribeParameters'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'ssm:GetParameters'
+                Resource: !Sub 'arn:aws:ssm:us-east-1:${AWS::AccountId}:parameter/default/${ObjectAccessKey}/*'
+              - Effect: Allow
+                Action:
+                  - 'ssm:GetParameters'
+                Resource: !Sub 'arn:aws:ssm:us-east-1:${AWS::AccountId}:parameter/default/rds/*'
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore'
         - 'arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy'
@@ -202,6 +218,22 @@ Resources:
                   - 'logs:CreateLogStream'
                   - 'logs:CreateLogGroups'
                   - 'logs:PutLogEvents'
+        - PolicyName: ParametersPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'ssm:DescribeParameters'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'ssm:GetParameters'
+                Resource: !Sub 'arn:aws:ssm:us-east-1:${AWS::AccountId}:parameter/default/${ObjectAccessKey}/*'
+              - Effect: Allow
+                Action:
+                  - 'ssm:GetParameters'
+                Resource: !Sub 'arn:aws:ssm:us-east-1:${AWS::AccountId}:parameter/default/rds/*'
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore'
         - 'arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy'
