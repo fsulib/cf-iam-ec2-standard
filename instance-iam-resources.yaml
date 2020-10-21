@@ -208,16 +208,6 @@ Resources:
                 Resource: '*'
                 Action:
                   - 'acm:GetCertificate'
-        - PolicyName: LoggingPolicy
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Resource: !GetAtt InstanceLogGroup.Arn
-                Action:
-                  - 'logs:CreateLogStream'
-                  - 'logs:CreateLogGroups'
-                  - 'logs:PutLogEvents'
         - PolicyName: ParametersPolicy
           PolicyDocument:
             Version: 2012-10-17
