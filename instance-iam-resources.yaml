@@ -1,27 +1,21 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
 Description: >
-  This template creates
-  an IAM Role that forms the basis of an Instance Profile. The role includes
-  inline policies that allow ListObjects, Get, Put, and DeleteObject
-  permissions on the ec2 and va-backups.lib.fsu.edu buckets. Get, Put, and
-  Delete work for all objects falling under a key designated by the parameter
-  'ObjectAccessKey.' We also allow ec2:DescribeInstances, ec2:CreateTags, and
-  cloudformation:DescribeAppResources to aid in UserData and cfn-init
-  scripting. Naturally, we include the AWS managed policies
-  AmazonSSMManagedInstanceCore and CloudWatchAgentServerPolicy. Finally, the
-  boolean parameter 'EnableLogging' controls logs:CreateLogStream and
-  logs:PutLogEvents.  The default value is 'false.' If selecting 'true,' be
-  sure to indicate a descriptive name for the associated log group by supplying
-  a string to the 'LogGroupName' parameter. This exports the name
-  'IamResources-InstanceProfileArn' for use in nested templates.
+  This template creates an IAM Role that forms the basis of an Instance Profile.
+  It outputs the name and arn of both profile and associated role.
 
 Parameters:
 
-  ObjectAccessKey:
-    Description: >
-      The key under which the instance may exercise CRUD permissions.
+  App:
     Type: String
+
+  Env:
+    Type: String
+    Default: test
+    AllowedValues:
+      - dev
+      - test
+      - prod
 
   EnableLogging:
     Description: >
@@ -75,8 +69,11 @@ Resources:
                 Resource: 'arn:aws:s3:::ec2.lib.fsu.edu'
                 Action:
                   - 's3:ListBucket'
+                  - 's3:GetBucketLocation'
+                  - 's3:ListBucketMultipartUploads'
+                  - 's3:ListBucketVersions'
               - Effect: Allow
-                Resource: !Sub 'arn:aws:s3:::ec2.lib.fsu.edu/${ObjectAccessKey}/*'
+                Resource: !Sub 'arn:aws:s3:::ec2.lib.fsu.edu/${App}/${Env}/*'
                 Action:
                   - 's3:PutObject'
                   - 's3:GetObject'
@@ -89,12 +86,19 @@ Resources:
                 Resource: 'arn:aws:s3:::va-backups.lib.fsu.edu'
                 Action:
                   - 's3:ListBucket'
+                  - 's3:GetBucketLocation'
+                  - 's3:ListBucketMultipartUploads'
+                  - 's3:ListBucketVersions'
               - Effect: Allow
-                Resource: !Sub 'arn:aws:s3:::va-backups.lib.fsu.edu/${ObjectAccessKey}/*'
+                Resource: !Sub 'arn:aws:s3:::va-backups.lib.fsu.edu/${App}/${Env}/*'
                 Action:
                   - 's3:PutObject'
                   - 's3:GetObject'
                   - 's3:DeleteObject'
+                  - 's3:CreateMultipartUpload'
+                  - 's3:CompleteMultipartUpload'
+                  - 's3:AbortMultipartUpload'
+                  - 's3:ListMultipartUploads'
         - PolicyName: Ec2ApiPolicy
           PolicyDocument:
             Version: 2012-10-17
@@ -131,7 +135,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - 'ssm:GetParameters'
-                Resource: !Sub 'arn:aws:ssm:us-east-1:${AWS::AccountId}:parameter/default/${ObjectAccessKey}/*'
+                Resource: !Sub 'arn:aws:ssm:us-east-1:${AWS::AccountId}:parameter/${App}/${Env}/*'
               - Effect: Allow
                 Action:
                   - 'ssm:GetParameters'
@@ -163,8 +167,11 @@ Resources:
                 Resource: 'arn:aws:s3:::ec2.lib.fsu.edu'
                 Action:
                   - 's3:ListBucket'
+                  - 's3:GetBucketLocation'
+                  - 's3:ListBucketMultipartUploads'
+                  - 's3:ListBucketVersions'
               - Effect: Allow
-                Resource: !Sub 'arn:aws:s3:::ec2.lib.fsu.edu/${ObjectAccessKey}/*'
+                Resource: !Sub 'arn:aws:s3:::ec2.lib.fsu.edu/${App}/${Env}/*'
                 Action:
                   - 's3:PutObject'
                   - 's3:GetObject'
@@ -177,12 +184,19 @@ Resources:
                 Resource: 'arn:aws:s3:::va-backups.lib.fsu.edu'
                 Action:
                   - 's3:ListBucket'
+                  - 's3:GetBucketLocation'
+                  - 's3:ListBucketMultipartUploads'
+                  - 's3:ListBucketVersions'
               - Effect: Allow
-                Resource: !Sub 'arn:aws:s3:::va-backups.lib.fsu.edu/${ObjectAccessKey}/*'
+                Resource: !Sub 'arn:aws:s3:::va-backups.lib.fsu.edu/${App}/${Env}/*'
                 Action:
                   - 's3:PutObject'
                   - 's3:GetObject'
                   - 's3:DeleteObject'
+                  - 's3:CreateMultipartUpload'
+                  - 's3:CompleteMultipartUpload'
+                  - 's3:AbortMultipartUpload'
+                  - 's3:ListMultipartUploads'
         - PolicyName: Ec2ApiPolicy
           PolicyDocument:
             Version: 2012-10-17
@@ -219,7 +233,11 @@ Resources:
               - Effect: Allow
                 Action:
                   - 'ssm:GetParameters'
-                Resource: !Sub 'arn:aws:ssm:us-east-1:${AWS::AccountId}:parameter/default/${ObjectAccessKey}/*'
+                Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${App}/${Env}/*'
+              - Effect: Allow
+                Action:
+                  - 'ssm:PutParameter'
+                Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${App}/${Env}/*'
               - Effect: Allow
                 Action:
                   - 'ssm:GetParameters'
@@ -247,15 +265,23 @@ Resources:
 
 Outputs:
 
-  InstanceProfileArn:
+  ProfileArn:
     Description: The Arn of the instance profile.
     Value: !GetAtt InstanceProfile.Arn
 
-  InstanceProfileName:
+  ProfileName:
     Description: The name of the instance profile.
     Value: !Ref InstanceProfile
 
-  InstanceRoleName:
+  RoleArn:
+    Description: The arn of the role.
+    Value:
+      Fn::If:
+        - LoggingEnabled
+        - !GetAtt InstanceRoleWithLogging.Arn
+        - !GetAtt InstanceRoleNoLogging.Arn
+
+  RoleName:
     Description: The name of the role.
     Value:
       Fn::If:
