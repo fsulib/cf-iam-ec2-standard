@@ -134,12 +134,16 @@ Resources:
                 Resource: '*'
               - Effect: Allow
                 Action:
-                  - 'ssm:GetParameters'
-                Resource: !Sub 'arn:aws:ssm:us-east-1:${AWS::AccountId}:parameter/${App}/${Env}/*'
+                  - 'ssm:PutParameter'
+                Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${App}/*'
               - Effect: Allow
                 Action:
                   - 'ssm:GetParameters'
-                Resource: !Sub 'arn:aws:ssm:us-east-1:${AWS::AccountId}:parameter/default/rds/*'
+                Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${App}/*'
+              - Effect: Allow
+                Action:
+                  - 'ssm:GetParameters'
+                Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/default/rds/*'
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore'
         - 'arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy'
@@ -171,7 +175,7 @@ Resources:
                   - 's3:ListBucketMultipartUploads'
                   - 's3:ListBucketVersions'
               - Effect: Allow
-                Resource: !Sub 'arn:aws:s3:::ec2.lib.fsu.edu/${App}/${Env}/*'
+                Resource: !Sub 'arn:aws:s3:::ec2.lib.fsu.edu/${App}/*'
                 Action:
                   - 's3:PutObject'
                   - 's3:GetObject'
@@ -188,7 +192,7 @@ Resources:
                   - 's3:ListBucketMultipartUploads'
                   - 's3:ListBucketVersions'
               - Effect: Allow
-                Resource: !Sub 'arn:aws:s3:::va-backups.lib.fsu.edu/${App}/${Env}/*'
+                Resource: !Sub 'arn:aws:s3:::va-backups.lib.fsu.edu/${App}/*'
                 Action:
                   - 's3:PutObject'
                   - 's3:GetObject'
@@ -233,15 +237,15 @@ Resources:
               - Effect: Allow
                 Action:
                   - 'ssm:GetParameters'
-                Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${App}/${Env}/*'
+                Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${App}/*'
               - Effect: Allow
                 Action:
                   - 'ssm:PutParameter'
-                Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${App}/${Env}/*'
+                Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${App}/*'
               - Effect: Allow
                 Action:
                   - 'ssm:GetParameters'
-                Resource: !Sub 'arn:aws:ssm:us-east-1:${AWS::AccountId}:parameter/default/rds/*'
+                Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/default/rds/*'
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore'
         - 'arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy'
